@@ -227,6 +227,8 @@ async function desenhaAba() {
       ${chaveT("geral.novidades", "Novidades do Claude e da Anthropic", "Uma busca rápida na web por dia (gasta bem pouco do plano)")}
       ${chaveT("geral.reage", "Papel de parede reage ao Claude", "Ondas e ritmo mudam enquanto ele pensa, trabalha ou espera você")}
       ${chaveT("geral.notificacoes", "Notificações do Windows", "Quando ele termina ou precisa de você com a janela em segundo plano")}
+      <h3 class="pz-sub">Atualizações</h3>
+      <div class="pz-linha"><span>Claudinho <b class="pz-versao"></b><small class="pz-atualiza-txt"></small></span><button class="btn" data-atualiza hidden></button></div>
       <h3 class="pz-sub">Conta</h3>
       <div class="pz-linha"><span>Entrar com<small>O login do Claude Code usa o seu plano do Claude. A chave de API cobra por uso na sua conta da Anthropic.</small></span>
         <div class="pz-seg" data-conta><button data-v="login">Login do Claude Code</button><button data-v="chave">Chave de API</button></div></div>
@@ -297,7 +299,30 @@ async function desenhaAba() {
   }
   corpoP.innerHTML = h;
   ligaControles(corpoP);
-  if (abaP === "geral") ligaConta(corpoP);
+  if (abaP === "geral") { ligaConta(corpoP); ligaAtualizacao(corpoP); }
+}
+// Updates: where it stands, and a button to look now or restart into the new one.
+const TXT_ATUALIZA = {
+  desligada: "Rodando pelo código: as atualizações automáticas ficam com o app instalado",
+  parado: "Procura sozinho ao abrir e a cada 6 horas",
+  procurando: "Procurando versão nova…",
+  em_dia: "Você está na versão mais nova",
+  erro: "Não deu pra procurar agora. Sem internet?",
+};
+window.desenhaAtualizacaoPz = (a) => {
+  const r = document.querySelector(".pz-corpo [data-atualiza]"); if (!r || !a) return;
+  const linha = r.closest(".pz-linha");
+  linha.querySelector(".pz-versao").textContent = a.versao || "";
+  linha.querySelector(".pz-atualiza-txt").textContent = a.estado === "baixando" ? `Baixando a ${a.nova}… ${a.progresso || 0}%` : a.estado === "pronta" ? `A ${a.nova} está pronta e entra quando o app reiniciar` : TXT_ATUALIZA[a.estado] || "";
+  r.hidden = a.estado === "desligada";
+  r.disabled = a.estado === "procurando" || a.estado === "baixando";
+  r.classList.toggle("forte", a.estado === "pronta");
+  r.textContent = a.estado === "pronta" ? "Reiniciar e atualizar" : "Procurar agora";
+};
+async function ligaAtualizacao(r) {
+  const b = r.querySelector("[data-atualiza]");
+  b.onclick = async () => (window.estadoAtualizacao?.estado === "pronta" ? window.instalaAtualizacao() : window.desenhaAtualizacaoPz((window.estadoAtualizacao = await vivo.atualizacaoProcurar())));
+  window.desenhaAtualizacaoPz(window.estadoAtualizacao || (await vivo.atualizacao()));
 }
 // Sign-in: Claude Code's own login, or an API key kept encrypted by the OS
 // (it never comes back to the window, only whether there is one).

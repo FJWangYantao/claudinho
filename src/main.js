@@ -6,6 +6,7 @@
 import { app, BrowserWindow, ipcMain, dialog, shell, globalShortcut, nativeImage, protocol, net, safeStorage } from "electron";
 import { query as querySdk, listSessions, getSessionMessages, renameSession, deleteSession, forkSession, createSdkMcpServer, tool } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
+import atualizador from "electron-updater";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -923,9 +924,41 @@ function servePapelWeb() {
   });
 }
 
+// ---- updates ---------------------------------------------------------------------------
+// The installed app looks for a new release on GitHub (latest.yml next to the
+// installer) a little after it opens and every six hours, downloads it in the
+// background and tells the windows. It installs on "Reiniciar agora" or by
+// itself the next time the app closes. Running from the code (npm start) it
+// stays quiet. VIVO_FEED="http://..." points it at a test server instead.
+let atualizacao = { estado: "parado", versao: app.getVersion() };
+const avisaAtualizacao = (mudanca) => {
+  atualizacao = { ...atualizacao, ...mudanca };
+  if (process.env.VIVO_LOG || process.env.VIVO_FEED) console.log("[atualizacao]", JSON.stringify(atualizacao));
+  for (const j of janelas.values()) enviarEvento(j, { tipo: "atualizacao", ...atualizacao });
+};
+let procuraAtualizacao = async () => avisaAtualizacao({ estado: "desligada" });
+function iniciaAtualizacoes() {
+  if (!(app.isPackaged || process.env.VIVO_FEED) || (process.env.VIVO_JS && !process.env.VIVO_FEED)) { atualizacao.estado = "desligada"; return; }
+  const { autoUpdater } = atualizador;
+  autoUpdater.autoDownload = true; autoUpdater.autoInstallOnAppQuit = !process.env.VIVO_FEED; autoUpdater.logger = null;
+  if (process.env.VIVO_FEED) { autoUpdater.forceDevUpdateConfig = true; autoUpdater.setFeedURL({ provider: "generic", url: process.env.VIVO_FEED }); }
+  autoUpdater.on("checking-for-update", () => avisaAtualizacao({ estado: "procurando" }));
+  autoUpdater.on("update-not-available", () => avisaAtualizacao({ estado: "em_dia", nova: null }));
+  autoUpdater.on("update-available", (i) => avisaAtualizacao({ estado: "baixando", nova: i.version, notas: i.releaseNotes || "", progresso: 0 }));
+  autoUpdater.on("download-progress", (p) => avisaAtualizacao({ estado: "baixando", progresso: Math.round(p.percent) }));
+  autoUpdater.on("update-downloaded", (i) => avisaAtualizacao({ estado: "pronta", nova: i.version, progresso: 100 }));
+  autoUpdater.on("error", (e) => avisaAtualizacao({ estado: "erro", detalhe: String(e?.message || e).split(/\r?\n/)[0].slice(0, 160) }));
+  procuraAtualizacao = () => autoUpdater.checkForUpdates().catch(() => {});
+  setTimeout(procuraAtualizacao, process.env.VIVO_FEED ? 1500 : 10000);
+  setInterval(procuraAtualizacao, 6 * 3600e3);
+  ipcMain.handle("atualizacao_instalar", () => { if (atualizacao.estado === "pronta") setImmediate(() => autoUpdater.quitAndInstall(false, true)); });
+}
+ipcMain.handle("atualizacao", () => atualizacao);
+ipcMain.handle("atualizacao_procurar", () => { if (!["procurando", "baixando", "pronta"].includes(atualizacao.estado)) procuraAtualizacao(); return atualizacao; });
+
 app.whenReady().then(() => {
   if (process.env.VIVO_ATALHOS) { criaAtalhos(); app.quit(); return; }
-  servePapelWeb(); trazDoNomeAntigo(); lerConfig(); criarJanela(); atalhoGlobal(); vigiaSessoes();
+  servePapelWeb(); trazDoNomeAntigo(); lerConfig(); criarJanela(); atalhoGlobal(); vigiaSessoes(); iniciaAtualizacoes();
 });
 app.on("will-quit", () => globalShortcut.unregisterAll());
 app.on("window-all-closed", () => app.quit());

@@ -218,6 +218,7 @@ vivo.aoEvento((ev) => {
     case "info": break;
     case "fim": if (!ev.ok && ev.detalhe !== "success") aviso(`Parou: ${ev.detalhe}`, true); break;
     case "erro": tiraPensando(); aviso(ev.texto, true); window.somEvento?.("erro"); break;
+    case "atualizacao": mostraAtualizacao(ev); break;
     case "parado":
       tiraPensando(); fechaSegmento(); setRodando(false); carregaSessoes();
       if (fila.length) setTimeout(proximaDaFila, 350);
@@ -403,6 +404,28 @@ function nota(texto, erro = false) {
   timerNota = setTimeout(() => banner.classList.remove("on", "erro"), 4200);
 }
 $("enviar").onclick = () => (rodando ? vivo.parar() : envia());
+
+// ---- updates ----------------------------------------------------------------------------
+// A new version downloads by itself; once it is ready a small card waits at the
+// foot of the sidebar (and the Clawd mentions it, once). It also goes in by
+// itself the next time the app closes.
+const cartaoAtualiza = Object.assign(document.createElement("div"), { className: "atualiza", hidden: true });
+document.querySelector(".side-base").prepend(cartaoAtualiza);
+let atualizaAvisada = "";
+function mostraAtualizacao(a) {
+  window.estadoAtualizacao = a;
+  window.desenhaAtualizacaoPz?.(a);
+  cartaoAtualiza.hidden = a.estado !== "pronta";
+  if (cartaoAtualiza.hidden) return;
+  cartaoAtualiza.innerHTML = `<span class="atualiza-faisca">✻</span><span class="atualiza-txt"><b>Versão ${esc(a.nova)} pronta</b><small>Entra quando o app reiniciar</small></span><button>Reiniciar</button>`;
+  cartaoAtualiza.querySelector("button").onclick = instalaAtualizacao;
+  if (atualizaAvisada !== a.nova) { atualizaAvisada = a.nova; dispatchEvent(new CustomEvent("clawd-diz", { detail: { texto: "saiu versão nova de mim!", ms: 4500 } })); }
+}
+window.instalaAtualizacao = function instalaAtualizacao() {
+  if (rodando) return nota("Espere o Claude terminar e reinicie: a atualização entra na hora.");
+  vivo.atualizacaoInstalar();
+};
+vivo.atualizacao().then(mostraAtualizacao);
 col.addEventListener("click", (e) => { const a = e.target.closest("a[href]"); if (a) { e.preventDefault(); vivo.link(a.href); } });
 
 // The empty conversation: the mark breathing, a greeting for the time of

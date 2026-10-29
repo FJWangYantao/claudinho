@@ -44,5 +44,8 @@ contextBridge.exposeInMainWorld("vivo", {
   uso: () => ipcRenderer.invoke("uso"),
   novidades: () => ipcRenderer.invoke("novidades"),
   abrirArquivo: (caminho, naPasta) => ipcRenderer.invoke("abrir_arquivo", caminho, naPasta),
+  atualizacao: () => ipcRenderer.invoke("atualizacao"),
+  atualizacaoProcurar: () => ipcRenderer.invoke("atualizacao_procurar"),
+  atualizacaoInstalar: () => ipcRenderer.invoke("atualizacao_instalar"),
   aoEvento: (fn) => ipcRenderer.on("evento", (_e, ev) => fn(ev)),
 });

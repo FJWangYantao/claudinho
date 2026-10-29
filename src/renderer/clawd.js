@@ -70,6 +70,8 @@ const Clawd = (() => {
     if (ms) timerBalao = setTimeout(() => balao.classList.remove("on"), ms);
   }
   const sorteia = (l) => l[Math.floor(Math.random() * l.length)];
+  // other parts of the app can hand him a line (a new version, say)
+  addEventListener("clawd-diz", ({ detail }) => { if (ligado) fala(detail.texto, detail.ms || 3500); });
 
   addEventListener("estado-claude", ({ detail }) => {
     const e = detail.estado; desde = performance.now();

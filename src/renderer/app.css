@@ -1062,3 +1062,18 @@ select option::checkmark { order: 1; margin-left: auto; color: var(--accent-2); 
 /* Cursor: the pixel arrow everywhere (set by personalizar.js), the text beam where you type */
 html { cursor: var(--cur-seta, default); }
 textarea, input:not([type=range], [type=color], [type=checkbox], [type=radio], [type=file], [type=button]), [contenteditable="true"] { cursor: text; }
+
+/* A new version ready: a small card at the foot of the sidebar */
+.atualiza { display: flex; align-items: center; gap: 10px; margin: 0 2px 8px; padding: 9px 9px 9px 11px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line-2));
+  background: color-mix(in srgb, var(--accent) 12%, var(--card)); animation: entra 0.4s var(--ease) both; }
+.atualiza[hidden] { display: none; }
+.atualiza-faisca { color: var(--accent-2); font-size: 18px; line-height: 1; animation: gira-faisca 6s linear infinite; }
+@keyframes gira-faisca { to { transform: rotate(360deg); } }
+.atualiza-txt { display: grid; min-width: 0; line-height: 1.3; }
+.atualiza-txt b { font-size: 12.5px; font-weight: 600; }
+.atualiza-txt small { font-size: 11px; color: var(--ui-dim); }
+.atualiza button { margin-left: auto; flex: none; padding: 5px 10px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; cursor: var(--cur-mao, pointer); }
+.atualiza button:hover { filter: brightness(1.1); }
+.pz-versao { font-weight: 500; color: var(--ui-dim); margin-left: 4px; }
+.btn:disabled { opacity: 0.55; cursor: var(--cur-seta, default); }
+
