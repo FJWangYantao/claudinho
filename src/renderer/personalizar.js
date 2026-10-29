@@ -11,7 +11,7 @@ const PADRAO = {
   fontes: { ui: "Inter", mono: "Geist Mono", tamanho: 14, largura: 740 },
   sons: {}, volumeSons: 0.7,
   musica: { ligada: false, substitui: true, aleatoria: false, volume: 0.5 },
-  geral: { enviar: "enter", raciocinio: true, titulo: true, reage: true, notificacoes: true, clawd: true, clawdFala: true, novidades: true, desempenho: "auto" },
+  geral: { enviar: "enter", raciocinio: true, titulo: true, reage: true, notificacoes: true, clawd: true, clawdFala: true, novidades: true, cursor: true, desempenho: "auto" },
 };
 const pega = (k) => k.split(".").reduce((o, p) => (o == null ? undefined : o[p]), VIS) ?? k.split(".").reduce((o, p) => (o == null ? undefined : o[p]), PADRAO);
 const poe = (k, v) => { const ps = k.split("."), ult = ps.pop(); let o = VIS; for (const p of ps) o = o[p] ??= {}; o[ult] = v; };
@@ -44,12 +44,48 @@ async function carregaArquivo(item) {
 const rgba = (hex, a) => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return null; const n = parseInt(m[1], 16); return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${Math.max(0, Math.min(1, a)).toFixed(2)})`; };
 const raiz = document.documentElement.style, corpo = document.body.style;
 
+// ---- cursor ---------------------------------------------------------------------------
+// The app's own pointer: a pixel arrow in the accent colour (O outline, H light
+// edge, F fill), and over anything clickable the same arrow with the Claude
+// spark. Drawn as SVG and handed to the stylesheet as --cur-seta / --cur-mao.
+const SETA = [
+  "O", "OO", "OHO", "OHFO", "OHFFO", "OHFFFO", "OHFFFFO", "OHFFFFFO", "OHFFFFFFO", "OHFFFFFFFO",
+  "OHFFFFOOOOO", "OHFOFFO", "OFO.OFFO", "OO..OFFO", "O....OFFO", ".....OOO",
+];
+const FAISCA = ["S.S.S", ".SSS.", "SSSSS", ".SSS.", "S.S.S"];
+const MAO = SETA.map((l, y) => {
+  const f = FAISCA[y - 10]; if (!f) return l;
+  const linha = [...l.padEnd(16, ".")];
+  [...f].forEach((c, x) => { if (c === "S") linha[11 + x] = "S"; });
+  return linha.join("");
+});
+const pixelSvg = (linhas, cores) => {
+  const w = Math.max(...linhas.map((l) => l.length)), h = linhas.length;
+  let px = "";
+  linhas.forEach((l, y) => [...l].forEach((c, x) => { if (cores[c]) px += `<rect x="${x}" y="${y}" width="1" height="1" fill="${cores[c]}"/>`; }));
+  return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${w * 2}" height="${h * 2}" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges">${px}</svg>`)}")`;
+};
+// any CSS colour to #rrggbb (the canvas normalises it), and a lighter mix of it
+const hexDe = (cor) => { const c = document.createElement("canvas").getContext("2d"); c.fillStyle = "#d97757"; c.fillStyle = cor; return /^#[0-9a-f]{6}$/i.test(c.fillStyle) ? c.fillStyle : "#d97757"; };
+const clareia = (hex, k) => "#" + [1, 3, 5].map((i) => Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - k) + 255 * k).toString(16).padStart(2, "0")).join("");
+let cursorFeito = "";
+function aplicaCursor(acento) {
+  if (!acento) { cursorFeito = ""; raiz.removeProperty("--cur-seta"); raiz.removeProperty("--cur-mao"); return; }
+  const f = hexDe(acento);
+  if (f === cursorFeito) return;
+  cursorFeito = f;
+  const cores = { O: "#1a1311", F: f, H: clareia(f, 0.45), S: clareia(f, 0.15) };
+  raiz.setProperty("--cur-seta", `${pixelSvg(SETA, cores)} 1 1, default`);
+  raiz.setProperty("--cur-mao", `${pixelSvg(MAO, cores)} 1 1, pointer`);
+}
+
 async function aplicaVisual() {
   // colours
   const c = { ...PADRAO.cores, ...VIS.cores };
   corpo.setProperty("--accent", c.acento); corpo.setProperty("--accent-2", `color-mix(in srgb, ${c.acento} 78%, white)`);
   if (c.texto) { corpo.setProperty("--ui", c.texto); corpo.setProperty("--ui-2", `color-mix(in srgb, ${c.texto} 78%, transparent)`); corpo.setProperty("--ui-dim", `color-mix(in srgb, ${c.texto} 56%, transparent)`); }
   else ["--ui", "--ui-2", "--ui-dim"].forEach((v) => corpo.removeProperty(v));
+  aplicaCursor(pega("geral.cursor") && c.acento);
   const mexeuVidro = VIS.cores && ("vidro" in VIS.cores || "opacidade" in VIS.cores);
   if (mexeuVidro) {
     corpo.setProperty("--vidro", rgba(c.vidro, c.opacidade)); corpo.setProperty("--panel", rgba(c.vidro, c.opacidade + 0.03));
@@ -186,6 +222,7 @@ async function desenhaAba() {
       ${chaveT("geral.raciocinio", "Mostrar o raciocínio do Claude", "O que ele pensa antes de responder, num bloco recolhível")}
       ${chaveT("geral.titulo", "Título automático", "Um título curto para cada conversa nova (gasta bem pouco do seu plano)")}
       ${chaveT("geral.clawd", "Clawd no app", "O mascote acompanha o que o Claude está fazendo")}
+      ${chaveT("geral.cursor", "Cursor do Claudinho", "Uma setinha em pixel na cor de destaque, com a faísca do Claude sobre o que dá pra clicar")}
       ${chaveT("geral.clawdFala", "Clawd puxa conversa", "Comentários sobre o projeto, curiosidades e dicas, de tempos em tempos")}
       ${chaveT("geral.novidades", "Novidades do Claude e da Anthropic", "Uma busca rápida na web por dia (gasta bem pouco do plano)")}
       ${chaveT("geral.reage", "Papel de parede reage ao Claude", "Ondas e ritmo mudam enquanto ele pensa, trabalha ou espera você")}
