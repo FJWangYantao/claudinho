@@ -57,7 +57,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Claudinho",
-      "artifactName": "Claudinho-Setup-${version}.exe",
+      "artifactName": "Claudinho-Setup.exe",
       "installerIcon": "src/icone.ico",
       "uninstallerIcon": "src/icone.ico",
       "uninstallDisplayName": "Claudinho"
