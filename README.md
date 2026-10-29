@@ -7,7 +7,7 @@ Site: [meuclaudinho.com.br](https://meuclaudinho.com.br) · Feito por [Luis Robe
 ## Instalar
 
 1. Instale o [Claude Code](https://code.claude.com/docs/en/setup) e entre com a sua conta (o Claudinho usa o Claude Code que está no seu computador).
-2. Baixe o instalador em [Releases](../../releases/latest) (`Claudinho-Setup-x.y.z.exe`) e abra. Windows 10 ou 11.
+2. Baixe o instalador em [Releases](../../releases/latest) (`Claudinho-Setup.exe`) e abra. Windows 10 ou 11.
 3. O instalador não é assinado: se o Windows mostrar "O Windows protegeu o seu computador", clique em **Mais informações → Executar assim mesmo**.
 
 **Como o Claudinho entra no Claude**: por padrão, com o login do próprio Claude Code (o seu plano). Em Personalizar → Geral → Conta dá pra usar uma **chave de API da Anthropic** no lugar (cobrada por uso); a chave fica cifrada pelo sistema.
