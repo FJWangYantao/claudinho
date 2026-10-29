@@ -881,8 +881,9 @@ function mostraMidia(info) {
   const camada = $("midia"), el = document.createElement(info.web ? "iframe" : info.video ? "video" : "img");
   // a web wallpaper is someone else's page: it runs on its own origin
   // (claudinho-we://<id>), never the app's, so it keeps its own storage but
-  // can't reach the app, the other wallpapers or the Claude bridge
-  if (info.web) { el.setAttribute("sandbox", "allow-scripts allow-same-origin"); el.tabIndex = -1; el.setAttribute("aria-hidden", "true"); el.style.setProperty("--escala", window.desempenho?.web ?? 0.8); }
+  // can't reach the app, the other wallpapers or the Claude bridge. A page a
+  // little wider than the window would show its own scrollbars: never.
+  if (info.web) { el.setAttribute("sandbox", "allow-scripts allow-same-origin"); el.setAttribute("scrolling", "no"); el.tabIndex = -1; el.setAttribute("aria-hidden", "true"); el.style.setProperty("--escala", window.desempenho?.web ?? 0.8); }
   // web wallpapers size their canvas once, as they load: the frame must be
   // laid out at full size before it gets its address
   else el.src = info.url;

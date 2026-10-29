@@ -225,7 +225,7 @@ async function desenhaAba() {
       <div class="pz-acoes"><button class="btn" data-acao="resetCores">Restaurar cores</button></div>`;
   } else if (abaP === "fontes") {
     const arquivos = await vivo.pessoalLista("fontes");
-    const opcoes = (lista, atual) => lista.map(([n]) => `<option value="${esc(n)}"${n === atual ? " selected" : ""}>${esc(n)}</option>`).join("") + arquivos.map((a) => `<option value="arquivo:${esc(a.id)}"${"arquivo:" + a.id === atual ? " selected" : ""}>${esc(a.nome)} (sua)</option>`).join("");
+    const opcoes = (lista, atual) => lista.map(([n, css]) => `<option value="${esc(n)}" style='font-family: ${css}'${n === atual ? " selected" : ""}>${esc(n)}</option>`).join("") + arquivos.map((a) => `<option value="arquivo:${esc(a.id)}"${"arquivo:" + a.id === atual ? " selected" : ""}>${esc(a.nome)} (sua)</option>`).join("");
     h = `<h3>Fontes</h3><p class="pz-desc">A fonte da interface, a dos códigos, o tamanho do texto e a largura da conversa. Fontes da internet carregam na hora; as suas (.ttf, .otf, .woff) ficam guardadas no app.</p>
       <label class="pz-linha"><span>Interface</span><select data-k="fontes.ui">${opcoes(FONTES_UI, pega("fontes.ui"))}</select></label>
       <label class="pz-linha"><span>Código</span><select data-k="fontes.mono">${opcoes(FONTES_MONO, pega("fontes.mono"))}</select></label>
@@ -292,7 +292,11 @@ function ligaControles(r) {
     el.oninput = () => { poe(el.dataset.k, el.value); aplicaVisual(); salva(); };
   });
   r.querySelectorAll("input[type=text][data-k]").forEach((el) => { el.value = pega(el.dataset.k) || ""; el.oninput = () => { poe(el.dataset.k, el.value); aplicaVisual(); salva(); }; });
-  r.querySelectorAll("select[data-k]").forEach((el) => { el.value = pega(el.dataset.k); el.onchange = () => { poe(el.dataset.k, el.value); aplicaVisual(); salva(); }; });
+  r.querySelectorAll("select[data-k]").forEach((el) => {
+    el.value = pega(el.dataset.k); el.onchange = () => { poe(el.dataset.k, el.value); aplicaVisual(); salva(); };
+    // the font menus show each option in its own face: fetch them the first time the menu opens
+    if (el.dataset.k.startsWith("fontes.")) el.addEventListener("pointerdown", () => [...FONTES_UI, ...FONTES_MONO].forEach(([n]) => carregaGoogle(n)), { once: true });
+  });
   r.querySelectorAll(".pz-seg[data-k]").forEach((el) => {
     const marca = () => el.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === String(pega(el.dataset.k))));
     marca(); el.querySelectorAll("button").forEach((b) => (b.onclick = () => { poe(el.dataset.k, b.dataset.v); marca(); aplicaVisual(); salva(); }));

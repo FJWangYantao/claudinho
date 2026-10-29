@@ -103,7 +103,10 @@ body.som-on .eq i { background: var(--accent-2); opacity: 1; animation: eq 0.9s 
 
 /* Conversation */
 main { position: relative; overflow: hidden; }
-.scroll { position: absolute; inset: 0 0 150px 0; overflow-y: auto; }
+.scroll { position: absolute; inset: 0 0 150px 0; overflow-x: hidden; overflow-y: auto; }
+/* long paths, links and tables wrap or scroll on their own instead of widening the conversation */
+.col { min-width: 0; overflow-wrap: anywhere; }
+.msg.claude table { display: block; max-width: 100%; overflow-x: auto; }
 .col { width: min(var(--largura, 740px), 88%); margin: 0 auto; padding: 34px 0 28px; line-height: 1.65; font-size: var(--tam, 14px); }
 .boas { text-align: center; margin-top: 15vh; }
 @keyframes respira { 0%, 100% { transform: scale(1); } 40% { transform: scale(0.72); opacity: 0.55; } }
@@ -187,8 +190,7 @@ main { position: relative; overflow: hidden; }
 .chip { display: flex; align-items: center; gap: 5px; padding: 3px 4px 3px 8px; border-radius: 8px; color: var(--ui-dim); cursor: pointer; transition: background 0.15s, color 0.15s; }
 .chip:hover { background: var(--hover); color: var(--ui); }
 .chip svg { width: 14px; height: 14px; }
-.chip select { background: transparent; border: 0; outline: 0; font-size: 12.5px; cursor: pointer; appearance: none; padding-right: 4px; }
-.chip select option { background: #252422; color: #ecebe7; }
+.chip select { background: transparent; border: 0; outline: 0; font-size: 12.5px; cursor: pointer; padding: 0 2px 0 0; }
 .enviar { margin-left: auto; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; border: 0; background: var(--accent); color: #fff; cursor: pointer; transition: transform 0.15s var(--ease), background 0.2s, opacity 0.2s; }
 .enviar:hover { transform: scale(1.06); } .enviar:active { transform: scale(0.94); }
 .enviar:disabled { opacity: 0.35; cursor: default; transform: none; }
@@ -1030,3 +1032,22 @@ body.leve.themed.light .janelinha { background: #f6f7f7; }
 .pz-chave input { flex: 1; min-width: 0; padding: 8px 11px; border-radius: 9px; border: 1px solid var(--line-2); background: #262523; color: var(--ui); font: 13px var(--mono); outline: 0; }
 .pz-chave input:focus { border-color: color-mix(in srgb, var(--accent) 50%, var(--line-2)); }
 .pz-conta-info code { font: 11.5px var(--mono); color: var(--ui-2); word-break: break-all; }
+
+/* Dropdowns: the native <select> drawn as one of ours (customizable select). The button keeps
+   each place's own look; the menu is a solid card with the accent on the chosen line. */
+:root { --menu: #232220; --menu-borda: rgba(255, 255, 255, 0.12); --menu-hover: rgba(255, 255, 255, 0.07); }
+body.themed.light { --menu: #f4f6f6; --menu-borda: rgba(15, 39, 48, 0.14); --menu-hover: rgba(15, 39, 48, 0.07); }
+select, ::picker(select) { appearance: base-select; }
+select { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+select::picker-icon { content: ""; width: 8px; height: 8px; flex: none; margin-left: auto; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: translateY(-2px) rotate(45deg); opacity: 0.55; transition: transform 0.2s var(--ease); }
+select:open::picker-icon { transform: translateY(1px) rotate(-135deg); }
+.chip select::picker-icon { width: 6px; height: 6px; margin-left: 2px; }
+::picker(select) { min-width: anchor-size(width); max-height: min(340px, 60vh); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--menu-borda) transparent; padding: 5px; margin: 6px 0; border-radius: 12px; border: 1px solid var(--menu-borda); background: var(--menu); color: var(--ui);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25); opacity: 0; transform: translateY(-4px) scale(0.98);
+  transition: opacity 0.16s, transform 0.18s var(--ease), overlay 0.18s allow-discrete, display 0.18s allow-discrete; }
+::picker(select):popover-open { opacity: 1; transform: none; }
+@starting-style { ::picker(select):popover-open { opacity: 0; transform: translateY(-4px) scale(0.98); } }
+select option { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px; font-size: 13px; color: var(--ui-2); cursor: pointer; white-space: nowrap; }
+select option:hover, select option:focus-visible { background: var(--menu-hover); color: var(--ui); outline: 0; }
+select option:checked { color: var(--ui); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+select option::checkmark { order: 1; margin-left: auto; color: var(--accent-2); }
