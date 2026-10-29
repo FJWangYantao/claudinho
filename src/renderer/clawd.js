@@ -266,7 +266,7 @@ function clawdGrande(cv) {
   const PW = 9, PH = 18, M = 34, W = CLAWD.W * PW + M * 2, H = CLAWD.H * PH + M * 2 + 10, dpr = Math.min(2, devicePixelRatio || 1);
   cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + "px"; cv.style.height = H + "px";
   const ctx = cv.getContext("2d"), balao = document.createElement("div");
-  balao.className = "clawd-balao grande"; cv.after(balao);
+  balao.className = "clawd-balao no-cartao"; cv.after(balao);
   let mx = null, my = null, ultimoMov = performance.now(), dentro = false, pulo = -9, proxPisca = 0, piscaAte = 0, proxHop = performance.now() + 6000, timerB = null;
   const faiscas = [];
   const fala = (t, ms = 1800) => { clearTimeout(timerB); balao.textContent = t; balao.classList.add("on"); timerB = setTimeout(() => balao.classList.remove("on"), ms); };

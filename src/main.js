@@ -476,8 +476,27 @@ function criarJanela(sessao) {
     title: config.visual?.nome || "Claudinho",
     titleBarStyle: "hidden",
     titleBarOverlay: { color: "#00000000", symbolColor: "#e9e6e1", height: 44 },
-    webPreferences: { preload: path.join(here, "preload.cjs"), contextIsolation: true, nodeIntegration: false, sandbox: true },
+    webPreferences: { preload: path.join(here, "preload.cjs"), contextIsolation: true, nodeIntegration: false, sandbox: true, offscreen: !!process.env.VIVO_GRAVAR },
   });
+  // VIVO_GRAVAR="pasta" (tests and demo videos): the window renders offscreen
+  // at 30 fps and, between "@@gravar:on" and "@@gravar:off" logged by the page,
+  // each frame is saved as a JPEG with its time, for ffmpeg.
+  if (process.env.VIVO_GRAVAR && !principal) {
+    const dir = process.env.VIVO_GRAVAR, tempos = [];
+    let gravando = false, n = 0, t0 = 0;
+    fs.mkdirSync(dir, { recursive: true });
+    win.webContents.setFrameRate(30);
+    win.webContents.on("console-message", (e) => {
+      if (e.message === "@@gravar:on") { gravando = true; t0 = performance.now(); }
+      if (e.message === "@@gravar:off") { gravando = false; fs.writeFileSync(path.join(dir, "tempos.json"), JSON.stringify(tempos)); }
+    });
+    win.webContents.on("paint", (_e, _r, img) => {
+      if (!gravando) return;
+      const nome = String(n++).padStart(5, "0") + ".jpg";
+      tempos.push([nome, Math.round(performance.now() - t0)]);
+      fs.writeFile(path.join(dir, nome), img.toJPEG(90), () => {});
+    });
+  }
   // (VIVO_PASTA: a folder for test runs, never saved)
   const j = { win, sessionId: null, atual: null, cwd: (!principal && process.env.VIVO_PASTA) || config.cwd }, id = win.webContents.id;
   janelas.set(id, j);
