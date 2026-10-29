@@ -1,0 +1,66 @@
+{
+  "name": "claudinho",
+  "productName": "Claudinho",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Claudinho: o seu Claude Code, agora com mais vida",
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.312",
+    "ascii-magic-art": "^1.1.0",
+    "marked": "^18.1.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0"
+  },
+  "author": {
+    "name": "Luis Roberto",
+    "url": "https://luisrobertoportifolio.com"
+  },
+  "homepage": "https://meuclaudinho.com.br",
+  "build": {
+    "appId": "com.claudinho.app",
+    "productName": "Claudinho",
+    "copyright": "Luis Roberto",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!node_modules/@anthropic-ai/claude-agent-sdk-*/**",
+      "!**/*.map"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "src/icone.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Claudinho",
+      "artifactName": "Claudinho-Setup-${version}.exe",
+      "installerIcon": "src/icone.ico",
+      "uninstallerIcon": "src/icone.ico",
+      "uninstallDisplayName": "Claudinho"
+    }
+  }
+}
