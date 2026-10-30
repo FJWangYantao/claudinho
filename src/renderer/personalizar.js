@@ -24,6 +24,7 @@ const salva = () => { clearTimeout(timerSalva); timerSalva = setTimeout(() => vi
 const q = (n) => `"${n}"`;
 const FONTES_UI = [["Inter", q("Inter")], ["Sistema", '"Segoe UI", system-ui'], ...["Poppins", "Nunito", "Space Grotesk", "DM Sans", "Lora", "Playfair Display", "Comic Neue", "VT323", "Press Start 2P", "Silkscreen", "Pixelify Sans", "Tiny5", "Jersey 10"].map((n) => [n, q(n)])];
 const FONTES_MONO = ["Geist Mono", "JetBrains Mono", "Fira Code", "IBM Plex Mono", "Space Mono", "Consolas"].map((n) => [n, q(n)]);
+const CJK = '"Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei"';
 const GOOGLE = new Set(["Silkscreen", "Pixelify Sans", "Tiny5", "Jersey 10", "Poppins", "Nunito", "Space Grotesk", "DM Sans", "Lora", "Playfair Display", "Comic Neue", "VT323", "Press Start 2P", "JetBrains Mono", "Fira Code", "IBM Plex Mono", "Space Mono"]);
 const carregadas = new Set();
 function carregaGoogle(nome) {
@@ -111,8 +112,11 @@ async function aplicaVisual() {
     }
   }
   carregaGoogle(fo.ui); carregaGoogle(fo.mono);
-  raiz.setProperty("--fonte", `${ui || q("Inter")}, Inter, system-ui, sans-serif`);
-  raiz.setProperty("--mono", `${mono || '"Geist Mono"'}, "Geist Mono", Consolas, monospace`);
+  // The CJK families ride along after the chosen face: none of the Latin fonts
+  // above carry Han characters, so Chinese text is drawn by the first one here
+  // that does (system fonts, on every platform).
+  raiz.setProperty("--fonte", `${ui || q("Inter")}, Inter, ${CJK}, system-ui, sans-serif`);
+  raiz.setProperty("--mono", `${mono || '"Geist Mono"'}, "Geist Mono", ${CJK}, Consolas, monospace`);
   raiz.setProperty("--tam", fo.tamanho + "px"); raiz.setProperty("--largura", fo.largura + "px");
   // name and icon in the sidebar
   const nome = (VIS.nome || "").trim() || "Claudinho";
@@ -149,7 +153,7 @@ function forcaModo() {
 }
 
 // ---- sounds for events ------------------------------------------------------------------
-const EVENTOS = [["enviar", "Enviar mensagem"], ["terminou", "O Claude terminou"], ["permissao", "Pedido de aprovação"], ["erro", "Erro"], ["clique", "Clique no papel de parede"], ["abrir", "Abrir o app"]];
+const EVENTOS = [["enviar", "pz.evento.enviar"], ["terminou", "pz.evento.terminou"], ["permissao", "pz.evento.permissao"], ["erro", "pz.evento.erro"], ["clique", "pz.evento.clique"], ["abrir", "pz.evento.abrir"]];
 let sonsCache = [];
 const urlSom = (id) => sonsCache.find((x) => x.id === id)?.url;
 function tocaArquivo(url, vol) { if (!url) return false; const a = new Audio(url); a.volume = Math.max(0, Math.min(1, vol)); a.play().catch(() => {}); return true; }
@@ -176,8 +180,8 @@ const musica = (() => {
   function mostraFaixa() {
     const el = $("somMusica"); if (!el) return;
     el.hidden = !faixas.length;
-    el.querySelector("b").textContent = faixas.length ? (VIS.musica?.ligada && !audio.paused ? faixas[i].nome : "Minha música") : "";
-    el.querySelector("small").textContent = !faixas.length ? "" : VIS.musica?.ligada ? (audio.paused ? "Pausada" : `${i + 1} de ${faixas.length}`) : `${faixas.length} faixa${faixas.length > 1 ? "s" : ""} · desligada`;
+    el.querySelector("b").textContent = faixas.length ? (VIS.musica?.ligada && !audio.paused ? faixas[i].nome : t("pz.musica.minha")) : "";
+    el.querySelector("small").textContent = !faixas.length ? "" : VIS.musica?.ligada ? (audio.paused ? t("pz.musica.pausada") : t("pz.musica.de", { i: i + 1, n: faixas.length })) : t("pz.musica.faixas", { n: faixas.length });
     el.querySelector(".mus-tocar").innerHTML = VIS.musica?.ligada && !audio.paused ? svg('<path d="M9 6v12M15 6v12"/>') : svg('<path d="M8 5.5v13l10-6.5z"/>');
   }
   async function atualiza() {
@@ -197,7 +201,7 @@ $("somMusica").querySelector(".mus-prox").onclick = () => { if (!VIS.musica?.lig
 
 // ---- the panel ------------------------------------------------------------------------------
 const personal = $("personal"), caixaP = $("personalCaixa");
-const ABAS = [["geral", "Geral"], ["fundo", "Fundo"], ["cores", "Cores"], ["fontes", "Fontes"], ["sons", "Sons"], ["musica", "Música"], ["app", "Ícone e nome"]];
+const ABAS = [["geral", "pz.aba.geral"], ["fundo", "pz.aba.fundo"], ["cores", "pz.aba.cores"], ["fontes", "pz.aba.fontes"], ["sons", "pz.aba.sons"], ["musica", "pz.aba.musica"], ["app", "pz.aba.app"]];
 let abaP = "geral";
 const PALETAS = [
   ["Claude", { acento: "#d97757", vidro: "#110f0e" }], ["Oceano", { acento: "#3fb6d9", vidro: "#071a24" }], ["Neon", { acento: "#ff3ea5", vidro: "#0d0618" }],
@@ -205,10 +209,13 @@ const PALETAS = [
   ["Sangue", { acento: "#e5484d", vidro: "#1a0a0b" }], ["Mono", { acento: "#e9e6df", vidro: "#101010" }],
 ];
 const pct = (v) => Math.round(v * 100) + "%";
-const deslizante = (k, rot, min, max, passo, fmt) => `<label class="pz-linha"><span>${rot}</span><input type="range" data-k="${k}" min="${min}" max="${max}" step="${passo}" /><output data-fmt="${fmt}"></output></label>`;
-const segmentos = (k, rot, ops) => `<div class="pz-linha"><span>${rot}</span><div class="pz-seg" data-k="${k}">${ops.map(([v, n]) => `<button data-v="${v}">${n}</button>`).join("")}</div></div>`;
-const chaveT = (k, rot, desc = "") => `<div class="pz-linha"><span>${rot}${desc ? `<small>${desc}</small>` : ""}</span><button class="chave" role="switch" data-k="${k}"><i></i></button></div>`;
-const cor = (k, rot) => `<label class="pz-linha"><span>${rot}</span><input type="color" data-k="${k}" /></label>`;
+// Every label in this panel is a text from i18n.js, named after the setting it
+// belongs to: the row for "fundo.escurecer" shows pz.fundo.escurecer, and so on.
+const pz = (k) => t("pz." + k);
+const deslizante = (k, min, max, passo, fmt) => `<label class="pz-linha"><span>${pz(k)}</span><input type="range" data-k="${k}" min="${min}" max="${max}" step="${passo}" /><output data-fmt="${fmt}"></output></label>`;
+const segmentos = (k, ops) => `<div class="pz-linha"><span>${pz(k)}</span><div class="pz-seg" data-k="${k}">${ops.map(([v, n]) => `<button data-v="${v}">${t(n)}</button>`).join("")}</div></div>`;
+const chaveT = (k, desc = "") => `<div class="pz-linha"><span>${pz(k)}${desc ? `<small>${t(desc)}</small>` : ""}</span><button class="chave" role="switch" data-k="${k}"><i></i></button></div>`;
+const cor = (k) => `<label class="pz-linha"><span>${pz(k)}</span><input type="color" data-k="${k}" /></label>`;
 const FMT = { pct, px: (v) => v + "px", n: (v) => v };
 
 async function desenhaAba() {
@@ -216,86 +223,87 @@ async function desenhaAba() {
   caixaP.querySelectorAll(".pz-nav button").forEach((b) => b.classList.toggle("on", b.dataset.aba === (abaP === "we" ? "fundo" : abaP)));
   let h = "";
   if (abaP === "geral") {
-    h = `<h3>Geral</h3><p class="pz-desc">Como o Claudinho se comporta.</p>
-      ${segmentos("geral.enviar", "Enviar mensagem com", [["enter", "Enter"], ["ctrl", "Ctrl + Enter"]])}
-      ${segmentos("geral.desempenho", "Desempenho", [["auto", "Automático"], ["maximo", "Máximo"], ["leve", "Leve"]])}
-      ${chaveT("geral.raciocinio", "Mostrar o raciocínio do Claude", "O que ele pensa antes de responder, num bloco recolhível")}
-      ${chaveT("geral.titulo", "Título automático", "Um título curto para cada conversa nova (gasta bem pouco do seu plano)")}
-      ${chaveT("geral.clawd", "Clawd no app", "O mascote acompanha o que o Claude está fazendo")}
-      ${chaveT("geral.cursor", "Cursor do Claudinho", "Uma setinha em pixel na cor de destaque, com a faísca do Claude sobre o que dá pra clicar")}
-      ${chaveT("geral.clawdFala", "Clawd puxa conversa", "Comentários sobre o projeto, curiosidades e dicas, de tempos em tempos")}
-      ${chaveT("geral.novidades", "Novidades do Claude e da Anthropic", "Uma busca rápida na web por dia (gasta bem pouco do plano)")}
-      ${chaveT("geral.reage", "Papel de parede reage ao Claude", "Ondas e ritmo mudam enquanto ele pensa, trabalha ou espera você")}
-      ${chaveT("geral.notificacoes", "Notificações do Windows", "Quando ele termina ou precisa de você com a janela em segundo plano")}
-      <h3 class="pz-sub">Atualizações</h3>
+    h = `<h3>${pz("aba.geral")}</h3><p class="pz-desc">${t("pz.geral.desc")}</p>
+      ${segmentos("idioma", [["pt", "pz.idioma.pt"], ["zh", "pz.idioma.zh"]])}
+      ${segmentos("geral.enviar", [["enter", "pz.op.enter"], ["ctrl", "pz.op.ctrlEnter"]])}
+      ${segmentos("geral.desempenho", [["auto", "pz.op.auto"], ["maximo", "pz.op.maximo"], ["leve", "pz.op.leve"]])}
+      ${chaveT("geral.raciocinio", "pz.geral.raciocinio.desc")}
+      ${chaveT("geral.titulo", "pz.geral.titulo.desc")}
+      ${chaveT("geral.clawd", "pz.geral.clawd.desc")}
+      ${chaveT("geral.cursor", "pz.geral.cursor.desc")}
+      ${chaveT("geral.clawdFala", "pz.geral.clawdFala.desc")}
+      ${chaveT("geral.novidades", "pz.geral.novidades.desc")}
+      ${chaveT("geral.reage", "pz.geral.reage.desc")}
+      ${chaveT("geral.notificacoes", "pz.geral.notificacoes.desc")}
+      <h3 class="pz-sub">${t("pz.geral.atualizacoes")}</h3>
       <div class="pz-linha"><span>Claudinho <b class="pz-versao"></b><small class="pz-atualiza-txt"></small></span><button class="btn" data-atualiza hidden></button></div>
-      <h3 class="pz-sub">Conta</h3>
-      <div class="pz-linha"><span>Entrar com<small>O login do Claude Code usa o seu plano do Claude. A chave de API cobra por uso na sua conta da Anthropic.</small></span>
-        <div class="pz-seg" data-conta><button data-v="login">Login do Claude Code</button><button data-v="chave">Chave de API</button></div></div>
-      <div class="pz-chave" hidden><input type="password" placeholder="Cole a chave da API (sk-ant-…)" autocomplete="off" spellcheck="false" /><button class="btn forte" data-acao="salvaChave">Salvar</button><button class="btn" data-acao="apagaChave">Apagar</button></div>
+      <h3 class="pz-sub">${t("pz.geral.conta")}</h3>
+      <div class="pz-linha"><span>${t("pz.geral.entrarCom")}<small>${t("pz.geral.entrarCom.desc")}</small></span>
+        <div class="pz-seg" data-conta><button data-v="login">${t("pz.geral.login")}</button><button data-v="chave">${t("pz.geral.chave")}</button></div></div>
+      <div class="pz-chave" hidden><input type="password" placeholder="${t("pz.geral.colarChave")}" autocomplete="off" spellcheck="false" /><button class="btn forte" data-acao="salvaChave">${t("pz.salvar")}</button><button class="btn" data-acao="apagaChave">${t("pz.apagar")}</button></div>
       <p class="pz-desc fraco pz-conta-info"></p>`;
   } else if (abaP === "fundo") {
     const fundos = await vivo.pessoalLista("fundos");
-    h = `<h3>Fundo</h3><p class="pz-desc">Use uma imagem, um GIF, um vídeo ou um papel de parede do Wallpaper Engine. Os temas animados e a biblioteca continuam no seletor de temas.</p>
-      <div class="pz-acoes"><button class="btn forte" data-acao="addFundo">Adicionar imagem, GIF ou vídeo</button><button class="btn" data-acao="wallpaperEngine">Do Wallpaper Engine</button><button class="btn" data-acao="temas">Abrir os temas</button></div>
-      <div class="pz-grade">${fundos.map((m) => `<button class="pz-mini${exibida === "midia:" + m.id ? " on" : ""}" data-fundo="${esc(m.id)}" title="${esc(m.nome)}">${m.ext === "web" ? `${m.preview ? `<img src="${esc(m.preview)}" alt="" />` : ""}<i>${esc(m.nome)}</i>` : VIDEO.test(m.ext) ? `<video src="${esc(m.url)}" muted preload="metadata"></video><i>▶</i>` : `<img src="${esc(m.url)}" alt="" />`}</button>`).join("") || '<p class="pz-vazio">Nenhum fundo seu ainda.</p>'}</div>
-      ${segmentos("fundo.ajuste", "Ajuste", [["cover", "Preencher"], ["contain", "Encaixar"]])}
-      ${deslizante("fundo.escurecer", "Escurecer", 0, 0.8, 0.05, "pct")}
-      ${deslizante("fundo.desfoque", "Desfocar", 0, 24, 1, "px")}
-      ${chaveT("fundo.somVideo", "Som do vídeo", "Toca o áudio quando o fundo é um vídeo")}`;
+    h = `<h3>${pz("aba.fundo")}</h3><p class="pz-desc">${t("pz.fundo.desc")}</p>
+      <div class="pz-acoes"><button class="btn forte" data-acao="addFundo">${t("pz.fundo.add")}</button><button class="btn" data-acao="wallpaperEngine">${t("pz.fundo.we")}</button><button class="btn" data-acao="temas">${t("pz.fundo.temas")}</button></div>
+      <div class="pz-grade">${fundos.map((m) => `<button class="pz-mini${exibida === "midia:" + m.id ? " on" : ""}" data-fundo="${esc(m.id)}" title="${esc(m.nome)}">${m.ext === "web" ? `${m.preview ? `<img src="${esc(m.preview)}" alt="" />` : ""}<i>${esc(m.nome)}</i>` : VIDEO.test(m.ext) ? `<video src="${esc(m.url)}" muted preload="metadata"></video><i>▶</i>` : `<img src="${esc(m.url)}" alt="" />`}</button>`).join("") || `<p class="pz-vazio">${t("pz.fundo.vazio")}</p>`}</div>
+      ${segmentos("fundo.ajuste", [["cover", "pz.op.preencher"], ["contain", "pz.op.encaixar"]])}
+      ${deslizante("fundo.escurecer", 0, 0.8, 0.05, "pct")}
+      ${deslizante("fundo.desfoque", 0, 24, 1, "px")}
+      ${chaveT("fundo.somVideo", "pz.fundo.somVideo.desc")}`;
   } else if (abaP === "we") {
     // Wallpaper Engine: video and web wallpapers come in; scenes only run inside it
-    corpoP.innerHTML = '<p class="pz-vazio">Procurando na sua biblioteca do Steam…</p>';
+    corpoP.innerHTML = `<p class="pz-vazio">${t("pz.we.procurando")}</p>`;
     const [we, meus] = await Promise.all([vivo.weLista(), vivo.pessoalLista("fundos")]), ja = new Set(meus.map((m) => m.nome));
     if (abaP !== "we") return;
-    const cenas = we.cenas ? `<p class="pz-desc fraco">${we.cenas} papéis de parede de cena ficaram de fora: eles são desenhados pelo motor do próprio Wallpaper Engine e só rodam dentro dele.</p>` : "";
-    h = `<div class="pz-volta"><button class="btn" data-acao="voltaFundo">${svg('<path d="M14.7 6.3 9 12l5.7 5.7 1.4-1.4-4.3-4.3 4.3-4.3z"/>')} Fundo</button></div>
-      <h3>Do Wallpaper Engine</h3><p class="pz-desc">Os papéis de parede de vídeo e de página da sua biblioteca. Ao escolher, ele é copiado para o Claudinho e continua funcionando mesmo se você cancelar a inscrição.</p>
-      ${!we.achou ? '<p class="pz-vazio">Não achei o Wallpaper Engine neste computador. Ele precisa estar instalado pelo Steam.</p>'
-        : `<input class="pz-busca" type="search" placeholder="Buscar entre ${we.itens.length}" />
-      <div class="pz-grade we-grade">${we.itens.map((i) => `<button class="pz-mini we" data-we="${esc(i.pasta)}" data-nome="${esc(i.nome.toLowerCase())}" title="${esc(i.nome)}">${i.preview ? `<img src="${esc(i.preview)}" alt="" loading="lazy" decoding="async" />` : ""}<span>${esc(i.nome)}</span><em>${i.tipo === "web" ? "Página" : "Vídeo"}${ja.has(i.nome.slice(0, 60)) ? " · já adicionado" : ""}</em></button>`).join("") || '<p class="pz-vazio">Nenhum papel de parede de vídeo ou de página na biblioteca.</p>'}</div>${cenas}`}`;
+    const cenas = we.cenas ? `<p class="pz-desc fraco">${t("pz.we.cenas", { n: we.cenas })}</p>` : "";
+    h = `<div class="pz-volta"><button class="btn" data-acao="voltaFundo">${svg('<path d="M14.7 6.3 9 12l5.7 5.7 1.4-1.4-4.3-4.3 4.3-4.3z"/>')} ${t("pz.volta")}</button></div>
+      <h3>${t("pz.we.titulo")}</h3><p class="pz-desc">${t("pz.we.desc")}</p>
+      ${!we.achou ? `<p class="pz-vazio">${t("pz.we.naoAchou")}</p>`
+        : `<input class="pz-busca" type="search" placeholder="${t("pz.we.buscar", { n: we.itens.length })}" />
+      <div class="pz-grade we-grade">${we.itens.map((i) => `<button class="pz-mini we" data-we="${esc(i.pasta)}" data-nome="${esc(i.nome.toLowerCase())}" title="${esc(i.nome)}">${i.preview ? `<img src="${esc(i.preview)}" alt="" loading="lazy" decoding="async" />` : ""}<span>${esc(i.nome)}</span><em>${i.tipo === "web" ? t("pz.we.pagina") : t("pz.we.video")}${ja.has(i.nome.slice(0, 60)) ? t("pz.we.jaAdicionado") : ""}</em></button>`).join("") || `<p class="pz-vazio">${t("pz.we.vazio")}</p>`}</div>${cenas}`}`;
   } else if (abaP === "cores") {
-    h = `<h3>Cores</h3><p class="pz-desc">Destaque, texto e o vidro dos painéis. As mudanças aparecem na hora.</p>
+    h = `<h3>${pz("aba.cores")}</h3><p class="pz-desc">${t("pz.cores.desc")}</p>
       <div class="pz-paletas">${PALETAS.map(([n, p]) => `<button data-paleta="${n}" title="${n}"><i style="background:${p.vidro}"><b style="background:${p.acento}"></b></i><span>${n}</span></button>`).join("")}</div>
-      ${cor("cores.acento", "Destaque")}${cor("cores.texto", "Texto")}${cor("cores.vidro", "Vidro")}
-      ${deslizante("cores.opacidade", "Opacidade do vidro", 0.1, 0.95, 0.01, "pct")}
-      ${deslizante("cores.desfoque", "Desfoque do vidro", 0, 30, 1, "px")}
-      ${segmentos("cores.modo", "Vidro claro ou escuro", [["auto", "Automático"], ["escuro", "Escuro"], ["claro", "Claro"]])}
-      <div class="pz-acoes"><button class="btn" data-acao="resetCores">Restaurar cores</button></div>`;
+      ${cor("cores.acento")}${cor("cores.texto")}${cor("cores.vidro")}
+      ${deslizante("cores.opacidade", 0.1, 0.95, 0.01, "pct")}
+      ${deslizante("cores.desfoque", 0, 30, 1, "px")}
+      ${segmentos("cores.modo", [["auto", "pz.op.auto"], ["escuro", "pz.op.escuro"], ["claro", "pz.op.claro"]])}
+      <div class="pz-acoes"><button class="btn" data-acao="resetCores">${t("pz.cores.reset")}</button></div>`;
   } else if (abaP === "fontes") {
     const arquivos = await vivo.pessoalLista("fontes");
-    const opcoes = (lista, atual) => lista.map(([n, css]) => `<option value="${esc(n)}" style='font-family: ${css}'${n === atual ? " selected" : ""}>${esc(n)}</option>`).join("") + arquivos.map((a) => `<option value="arquivo:${esc(a.id)}"${"arquivo:" + a.id === atual ? " selected" : ""}>${esc(a.nome)} (sua)</option>`).join("");
-    h = `<h3>Fontes</h3><p class="pz-desc">A fonte da interface, a dos códigos, o tamanho do texto e a largura da conversa. Fontes da internet carregam na hora; as suas (.ttf, .otf, .woff) ficam guardadas no app.</p>
-      <label class="pz-linha"><span>Interface</span><select data-k="fontes.ui">${opcoes(FONTES_UI, pega("fontes.ui"))}</select></label>
-      <label class="pz-linha"><span>Código</span><select data-k="fontes.mono">${opcoes(FONTES_MONO, pega("fontes.mono"))}</select></label>
-      ${deslizante("fontes.tamanho", "Tamanho do texto", 12, 19, 0.5, "px")}
-      ${deslizante("fontes.largura", "Largura da conversa", 560, 1100, 20, "px")}
-      <div class="pz-amostra"><b>O Claude Code trabalha em projetos.</b> <code>const tema = "seu";</code></div>
-      <div class="pz-acoes"><button class="btn" data-acao="addFonte">Adicionar fonte…</button></div>`;
+    const opcoes = (lista, atual) => lista.map(([n, css]) => `<option value="${esc(n)}" style='font-family: ${css}'${n === atual ? " selected" : ""}>${esc(n)}</option>`).join("") + arquivos.map((a) => `<option value="arquivo:${esc(a.id)}"${"arquivo:" + a.id === atual ? " selected" : ""}>${t("pz.fontes.sua", { nome: esc(a.nome) })}</option>`).join("");
+    h = `<h3>${pz("aba.fontes")}</h3><p class="pz-desc">${t("pz.fontes.desc")}</p>
+      <label class="pz-linha"><span>${t("pz.fontes.ui")}</span><select data-k="fontes.ui">${opcoes(FONTES_UI, pega("fontes.ui"))}</select></label>
+      <label class="pz-linha"><span>${t("pz.fontes.mono")}</span><select data-k="fontes.mono">${opcoes(FONTES_MONO, pega("fontes.mono"))}</select></label>
+      ${deslizante("fontes.tamanho", 12, 19, 0.5, "px")}
+      ${deslizante("fontes.largura", 560, 1100, 20, "px")}
+      <div class="pz-amostra">${t("pz.fontes.amostra")}</div>
+      <div class="pz-acoes"><button class="btn" data-acao="addFonte">${t("pz.fontes.add")}</button></div>`;
   } else if (abaP === "sons") {
     sonsCache = await vivo.pessoalLista("sons");
-    h = `<h3>Sons</h3><p class="pz-desc">Um som seu para cada coisa que acontece. Adicione arquivos (mp3, wav, ogg) e escolha onde tocam.</p>
-      <div class="pz-acoes"><button class="btn forte" data-acao="addSom">Adicionar sons…</button></div>
-      ${EVENTOS.map(([k, n]) => `<div class="pz-linha"><span>${n}</span><div class="pz-som"><select data-som="${k}"><option value="">Nenhum</option>${sonsCache.map((s) => `<option value="${esc(s.id)}"${VIS.sons?.[k] === s.id ? " selected" : ""}>${esc(s.nome)}</option>`).join("")}</select><button class="icone" data-testa="${k}" title="Ouvir">${svg('<path d="M8 5.5v13l10-6.5z"/>')}</button></div></div>`).join("")}
-      ${deslizante("volumeSons", "Volume dos sons", 0, 1, 0.05, "pct")}
-      ${sonsCache.length ? `<details class="pz-lista"><summary>Seus sons (${sonsCache.length})</summary>${sonsCache.map((s) => `<div><span>${esc(s.nome)}</span><button class="icone" data-apaga-som="${esc(s.id)}" title="Apagar">${ICONE.lixo}</button></div>`).join("")}</details>` : ""}`;
+    h = `<h3>${pz("aba.sons")}</h3><p class="pz-desc">${t("pz.sons.desc")}</p>
+      <div class="pz-acoes"><button class="btn forte" data-acao="addSom">${t("pz.sons.add")}</button></div>
+      ${EVENTOS.map(([k, n]) => `<div class="pz-linha"><span>${t(n)}</span><div class="pz-som"><select data-som="${k}"><option value="">${t("pz.sons.nenhum")}</option>${sonsCache.map((s) => `<option value="${esc(s.id)}"${VIS.sons?.[k] === s.id ? " selected" : ""}>${esc(s.nome)}</option>`).join("")}</select><button class="icone" data-testa="${k}" title="${t("pz.sons.ouvir")}">${svg('<path d="M8 5.5v13l10-6.5z"/>')}</button></div></div>`).join("")}
+      ${deslizante("volumeSons", 0, 1, 0.05, "pct")}
+      ${sonsCache.length ? `<details class="pz-lista"><summary>${t("pz.sons.seus", { n: sonsCache.length })}</summary>${sonsCache.map((s) => `<div><span>${esc(s.nome)}</span><button class="icone" data-apaga-som="${esc(s.id)}" title="${t("pz.apagar")}">${ICONE.lixo}</button></div>`).join("")}</details>` : ""}`;
   } else if (abaP === "musica") {
     const faixas = await vivo.pessoalLista("musica");
-    h = `<h3>Música de fundo</h3><p class="pz-desc">Suas músicas tocando enquanto você trabalha, no lugar da música dos temas ou junto com ela.</p>
-      <div class="pz-acoes"><button class="btn forte" data-acao="addMusica">Adicionar músicas…</button></div>
-      ${chaveT("musica.ligada", "Tocar minha música")}
-      ${chaveT("musica.substitui", "Substituir a música dos temas", "Desligado, as duas tocam juntas")}
-      ${chaveT("musica.aleatoria", "Ordem aleatória")}
-      ${deslizante("musica.volume", "Volume", 0, 1, 0.05, "pct")}
-      <div class="pz-faixas">${faixas.map((f, k) => `<div class="${musica.audio.dataset.id === f.id ? "on" : ""}"><button class="icone" data-faixa="${k}" title="Tocar">${svg('<path d="M8 5.5v13l10-6.5z"/>')}</button><span>${esc(f.nome)}</span><button class="icone" data-apaga-musica="${esc(f.id)}" title="Apagar">${ICONE.lixo}</button></div>`).join("") || '<p class="pz-vazio">Nenhuma música ainda.</p>'}</div>`;
+    h = `<h3>${pz("aba.musica")}</h3><p class="pz-desc">${t("pz.musica.desc")}</p>
+      <div class="pz-acoes"><button class="btn forte" data-acao="addMusica">${t("pz.musica.add")}</button></div>
+      ${chaveT("musica.ligada")}
+      ${chaveT("musica.substitui", "pz.musica.substitui.desc")}
+      ${chaveT("musica.aleatoria")}
+      ${deslizante("musica.volume", 0, 1, 0.05, "pct")}
+      <div class="pz-faixas">${faixas.map((f, k) => `<div class="${musica.audio.dataset.id === f.id ? "on" : ""}"><button class="icone" data-faixa="${k}" title="${t("pz.musica.tocar")}">${svg('<path d="M8 5.5v13l10-6.5z"/>')}</button><span>${esc(f.nome)}</span><button class="icone" data-apaga-musica="${esc(f.id)}" title="${t("pz.apagar")}">${ICONE.lixo}</button></div>`).join("") || `<p class="pz-vazio">${t("pz.musica.vazio")}</p>`}</div>`;
   } else if (abaP === "app") {
     const icones = await vivo.pessoalLista("icone"), atualIcone = icones.find((x) => x.id === VIS.icone);
-    h = `<h3>Ícone e nome</h3><p class="pz-desc">O ícone aparece na barra de tarefas e, se quiser, na barra lateral. O nome vai no topo da barra lateral e no título da janela.</p>
+    h = `<h3>${pz("aba.app")}</h3><p class="pz-desc">${t("pz.app.desc")}</p>
       <div class="pz-icone"><div class="pz-icone-prev"><img src="${atualIcone ? esc(atualIcone.url) : "../icone.png"}" alt="" /></div>
-        <div class="pz-acoes"><button class="btn forte" data-acao="addIcone">Escolher ícone…</button>${VIS.icone ? '<button class="btn" data-acao="iconePadrao">Usar o padrão</button>' : ""}</div></div>
-      ${chaveT("iconeNaBarra", "Mostrar o ícone na barra lateral")}
-      <label class="pz-linha"><span>Nome do app</span><input type="text" data-k="nome" maxlength="28" placeholder="Claudinho" /></label>
-      <p class="pz-desc fraco">O atalho "Abrir Claudinho.bat" mantém o ícone do Windows; o ícone novo aparece na barra de tarefas com o app aberto.</p>`;
+        <div class="pz-acoes"><button class="btn forte" data-acao="addIcone">${t("pz.app.escolher")}</button>${VIS.icone ? `<button class="btn" data-acao="iconePadrao">${t("pz.app.padrao")}</button>` : ""}</div></div>
+      ${chaveT("iconeNaBarra")}
+      <label class="pz-linha"><span>${t("pz.app.nome")}</span><input type="text" data-k="nome" maxlength="28" placeholder="Claudinho" /></label>
+      <p class="pz-desc fraco">${t("pz.app.aviso")}</p>`;
   }
   corpoP.innerHTML = h;
   ligaControles(corpoP);
@@ -303,21 +311,21 @@ async function desenhaAba() {
 }
 // Updates: where it stands, and a button to look now or restart into the new one.
 const TXT_ATUALIZA = {
-  desligada: "Rodando pelo código: as atualizações automáticas ficam com o app instalado",
-  parado: "Procura sozinho ao abrir e a cada 6 horas",
-  procurando: "Procurando versão nova…",
-  em_dia: "Você está na versão mais nova",
-  erro: "Não deu pra procurar agora. Sem internet?",
+  desligada: "pz.atualiza.desligada",
+  parado: "pz.atualiza.parado",
+  procurando: "pz.atualiza.procurando",
+  em_dia: "pz.atualiza.em_dia",
+  erro: "pz.atualiza.erro",
 };
 window.desenhaAtualizacaoPz = (a) => {
   const r = document.querySelector(".pz-corpo [data-atualiza]"); if (!r || !a) return;
   const linha = r.closest(".pz-linha");
   linha.querySelector(".pz-versao").textContent = a.versao || "";
-  linha.querySelector(".pz-atualiza-txt").textContent = a.estado === "baixando" ? `Baixando a ${a.nova}… ${a.progresso || 0}%` : a.estado === "pronta" ? `A ${a.nova} está pronta e entra quando o app reiniciar` : TXT_ATUALIZA[a.estado] || "";
+  linha.querySelector(".pz-atualiza-txt").textContent = a.estado === "baixando" ? t("pz.atualiza.baixando", { v: a.nova, p: a.progresso || 0 }) : a.estado === "pronta" ? t("pz.atualiza.pronta", { v: a.nova }) : TXT_ATUALIZA[a.estado] ? t(TXT_ATUALIZA[a.estado]) : "";
   r.hidden = a.estado === "desligada";
   r.disabled = a.estado === "procurando" || a.estado === "baixando";
   r.classList.toggle("forte", a.estado === "pronta");
-  r.textContent = a.estado === "pronta" ? "Reiniciar e atualizar" : "Procurar agora";
+  r.textContent = a.estado === "pronta" ? t("pz.atualiza.reiniciar") : t("pz.atualiza.procurar");
 };
 async function ligaAtualizacao(r) {
   const b = r.querySelector("[data-atualiza]");
@@ -332,12 +340,12 @@ async function ligaConta(r) {
   const mostra = () => {
     seg.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === c.entrar));
     caixa.hidden = c.entrar !== "chave";
-    campo.placeholder = c.temChave ? "Chave salva. Cole outra para trocar" : "Cole a chave da API (sk-ant-…)";
-    info.innerHTML = (c.claude ? `Claude Code encontrado em <code>${esc(c.claude)}</code>.` : "Claude Code não encontrado. Instale em code.claude.com e abra o Claudinho de novo.")
-      + (c.entrar === "chave" && !c.temChave ? " Falta salvar uma chave." : "");
+    campo.placeholder = c.temChave ? t("pz.geral.chaveSalva") : t("pz.geral.colarChave");
+    info.innerHTML = (c.claude ? t("pz.geral.claudeEncontrado", { caminho: esc(c.claude) }) : t("pz.geral.claudeNaoEncontrado"))
+      + (c.entrar === "chave" && !c.temChave ? t("pz.geral.faltaChave") : "");
   };
   seg.querySelectorAll("button").forEach((b) => (b.onclick = async () => { c = { ...c, ...(await vivo.contaSalvar({ entrar: b.dataset.v })) }; mostra(); }));
-  ACOES.salvaChave = async () => { const v = campo.value.trim(); if (!v) return; const res = await vivo.contaSalvar({ chave: v }); campo.value = ""; if (res.erro) nota(res.erro, true); else { c = { ...c, ...res }; nota("Chave salva"); } mostra(); };
+  ACOES.salvaChave = async () => { const v = campo.value.trim(); if (!v) return; const res = await vivo.contaSalvar({ chave: v }); campo.value = ""; if (res.erro) nota(res.erro, true); else { c = { ...c, ...res }; nota(t("pz.geral.chaveSalvaOk")); } mostra(); };
   ACOES.apagaChave = async () => { c = { ...c, ...(await vivo.contaSalvar({ chave: "" })) }; campo.value = ""; mostra(); };
   r.querySelectorAll("[data-acao='salvaChave'], [data-acao='apagaChave']").forEach((b) => (b.onclick = () => ACOES[b.dataset.acao]()));
   mostra();
@@ -361,7 +369,13 @@ function ligaControles(r) {
   });
   r.querySelectorAll(".pz-seg[data-k]").forEach((el) => {
     const marca = () => el.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.v === String(pega(el.dataset.k))));
-    marca(); el.querySelectorAll("button").forEach((b) => (b.onclick = () => { poe(el.dataset.k, b.dataset.v); marca(); aplicaVisual(); salva(); }));
+    marca(); el.querySelectorAll("button").forEach((b) => (b.onclick = async () => {
+      poe(el.dataset.k, b.dataset.v); marca(); aplicaVisual(); salva();
+      // The language is read by the main process too (dialogs, errors), so save it
+      // right away and rebuild the window: every panel and tooltip comes back in
+      // the new language, with no half-translated state in between.
+      if (el.dataset.k === "idioma") { clearTimeout(timerSalva); await vivo.visualSalvar(VIS); location.reload(); }
+    }));
   });
   r.querySelectorAll(".chave[data-k]").forEach((el) => {
     const marca = () => el.setAttribute("aria-checked", pega(el.dataset.k) ? "true" : "false");
@@ -370,7 +384,7 @@ function ligaControles(r) {
   r.querySelectorAll("[data-paleta]").forEach((b) => (b.onclick = () => { const p = PALETAS.find(([n]) => n === b.dataset.paleta)[1]; VIS.cores = { ...VIS.cores, ...p }; aplicaVisual(); salva(); desenhaAba(); }));
   r.querySelectorAll("[data-fundo]").forEach((b) => (b.onclick = async () => { await aplicaChave("midia:" + b.dataset.fundo); desenhaAba(); }));
   r.querySelectorAll("[data-som]").forEach((s) => (s.onchange = () => { VIS.sons = { ...VIS.sons, [s.dataset.som]: s.value || undefined }; salva(); somEvento(s.dataset.som); }));
-  r.querySelectorAll("[data-testa]").forEach((b) => (b.onclick = () => { if (!somEvento(b.dataset.testa)) nota("Escolha um som para esse evento primeiro."); }));
+  r.querySelectorAll("[data-testa]").forEach((b) => (b.onclick = () => { if (!somEvento(b.dataset.testa)) nota(t("pz.sons.escolha")); }));
   r.querySelectorAll("[data-apaga-som]").forEach((b) => (b.onclick = async () => { await vivo.pessoalApagar("sons", b.dataset.apagaSom); for (const k in VIS.sons) if (VIS.sons[k] === b.dataset.apagaSom) delete VIS.sons[k]; salva(); desenhaAba(); }));
   r.querySelectorAll("[data-faixa]").forEach((b) => (b.onclick = async () => { poe("musica.ligada", true); salva(); await musica.atualiza(); musica.tocaFaixa(+b.dataset.faixa); desenhaAba(); }));
   r.querySelectorAll("[data-apaga-musica]").forEach((b) => (b.onclick = async () => { if (musica.audio.dataset.id === b.dataset.apagaMusica) { musica.audio.pause(); musica.audio.removeAttribute("src"); musica.audio.dataset.id = ""; } await vivo.pessoalApagar("musica", b.dataset.apagaMusica); await musica.atualiza(); desenhaAba(); }));
@@ -379,12 +393,12 @@ function ligaControles(r) {
   if (busca) busca.oninput = () => { const q = busca.value.trim().toLowerCase(); r.querySelectorAll("[data-we]").forEach((b) => (b.hidden = !!q && !b.dataset.nome.includes(q))); };
   r.querySelectorAll("[data-we]").forEach((b) => (b.onclick = async () => {
     if (r.querySelector(".we.copiando")) return;
-    b.classList.add("copiando"); b.querySelector("em").textContent = "Copiando…";
+    b.classList.add("copiando"); b.querySelector("em").textContent = t("pz.we.copiando");
     const res = await vivo.weImportar(b.dataset.we);
     b.classList.remove("copiando");
-    if (res.erro) { nota(res.erro, true); b.querySelector("em").textContent = "Não deu"; return; }
+    if (res.erro) { nota(res.erro, true); b.querySelector("em").textContent = t("pz.we.naoDeu"); return; }
     await fundosPessoais(true); await aplicaChave("midia:" + res.item.id);
-    nota(`“${res.item.nome}” virou o fundo`);
+    nota(t("pz.we.virouFundo", { nome: res.item.nome }));
     abaP = "fundo"; desenhaAba();
   }));
 }
@@ -405,14 +419,14 @@ const ACOES = {
 function abrePersonal(aba) {
   if (aba) abaP = aba;
   if (!caixaP.childElementCount) {
-    caixaP.innerHTML = `<div class="pz-topo"><b>Personalizar</b><button class="icone" data-fecha title="Fechar (Esc)">${ICONE.erro}</button></div>
-      <div class="pz-meio"><nav class="pz-nav">${ABAS.map(([k, n]) => `<button data-aba="${k}">${n}</button>`).join("")}<div class="pz-rodape"><button class="pz-reset">Restaurar tudo</button></div></nav><div class="pz-corpo"></div></div>`;
+    caixaP.innerHTML = `<div class="pz-topo"><b>${t("pz.titulo")}</b><button class="icone" data-fecha title="${t("pz.fechar")}">${ICONE.erro}</button></div>
+      <div class="pz-meio"><nav class="pz-nav">${ABAS.map(([k, n]) => `<button data-aba="${k}">${t(n)}</button>`).join("")}<div class="pz-rodape"><button class="pz-reset">${t("pz.restaurar")}</button></div></nav><div class="pz-corpo"></div></div>`;
     caixaP.querySelector("[data-fecha]").onclick = fechaPersonal;
     caixaP.querySelectorAll(".pz-nav [data-aba]").forEach((b) => (b.onclick = () => { abaP = b.dataset.aba; desenhaAba(); }));
     const reset = caixaP.querySelector(".pz-reset");
     reset.onclick = () => {
-      if (!reset.dataset.certeza) { reset.dataset.certeza = "1"; reset.textContent = "Confirmar: restaurar tudo"; return; }
-      delete reset.dataset.certeza; reset.textContent = "Restaurar tudo";
+      if (!reset.dataset.certeza) { reset.dataset.certeza = "1"; reset.textContent = t("pz.confirmarRestaurar"); return; }
+      delete reset.dataset.certeza; reset.textContent = t("pz.restaurar");
       VIS = {}; aplicaVisual(); salva(); desenhaAba();
     };
   }

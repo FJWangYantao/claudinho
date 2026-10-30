@@ -8,7 +8,10 @@
   --pill: #2c2b29; --card: #262523; --code: #141413; --composer: #2a2927;
   --blur: 0px; --vidro: transparent; --accent: #d97757; --accent-2: #e8936f; --ok: #5fb08a; --err: #e2735f;
   --ease: cubic-bezier(0.22, 0.8, 0.24, 1);
-  --fonte: Inter, system-ui, sans-serif; --mono: "Geist Mono", Consolas, monospace;
+  /* The Latin faces have no Chinese glyphs: the CJK families come right after
+     them, so each character is drawn by whichever font has it. */
+  --fonte: Inter, "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", system-ui, sans-serif;
+  --mono: "Geist Mono", "Noto Sans Mono CJK SC", "Sarasa Mono SC", "Noto Sans SC", Consolas, monospace;
 }
 body.themed { --panel: rgba(16, 15, 14, 0.55); --line: rgba(255, 255, 255, 0.1); --line-2: rgba(255, 255, 255, 0.16); --hover: rgba(255, 255, 255, 0.07); --active: rgba(255, 255, 255, 0.11);
   --pill: rgba(255, 255, 255, 0.1); --card: rgba(18, 17, 16, 0.5); --code: rgba(0, 0, 0, 0.42); --composer: rgba(22, 21, 20, 0.55); --blur: 10px; --vidro: rgba(17, 16, 15, 0.52); }
@@ -17,6 +20,11 @@ body.themed.light { --ui: #0f2730; --ui-2: #2d4a54; --ui-dim: #4e6870; --panel: 
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); font: 14px/1.5 var(--fonte); color: var(--ui); -webkit-font-smoothing: antialiased; transition: color 0.5s; }
+/* Chinese sets a little looser than Portuguese: taller lines, a hint of
+   tracking, and no uppercase on the small labels. */
+html[lang^="zh"] body { line-height: 1.65; letter-spacing: 0.01em; }
+html[lang^="zh"] .msg { line-height: 1.8; }
+html[lang^="zh"] .grupo:not(.pasta), html[lang^="zh"] .menu-rotulo, html[lang^="zh"] .indice span, html[lang^="zh"] .pop-titulo, html[lang^="zh"] .na-fila .rot, html[lang^="zh"] .pergunta .rotulo, html[lang^="zh"] .janelinha header b { letter-spacing: 0.06em; text-transform: none; }
 button, select, textarea, input { font: inherit; color: inherit; }
 svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 kbd { font: 10.5px var(--mono); color: var(--ui-dim); border: 1px solid var(--line-2); border-radius: 5px; padding: 1px 5px; }

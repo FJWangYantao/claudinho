@@ -52,7 +52,7 @@ const Clawd = (() => {
   const PW = 4, PH = 8, W = 16 * PW, H = 5 * PH, MARGEM = 18;   // drawing area around him
   const cv = document.createElement("canvas"), balao = document.createElement("div"), caixa = document.createElement("div");
   caixa.className = "clawd"; balao.className = "clawd-balao"; caixa.append(balao, cv);
-  caixa.title = "Clawd: clique, ou arraste";
+  caixa.title = t("clawd.titulo");
   const dpr = Math.min(2, devicePixelRatio || 1), CW = W + MARGEM * 2, CH = H + MARGEM * 2;
   cv.width = CW * dpr; cv.height = CH * dpr; cv.style.width = CW + "px"; cv.style.height = CH + "px";
   const ctx = cv.getContext("2d");
@@ -64,6 +64,7 @@ const Clawd = (() => {
   let timerBalao = null;
   function fala(texto, ms = 0) {
     clearTimeout(timerBalao);
+    texto = tt(texto);
     if (!texto) { balao.classList.remove("on"); return; }
     balao.textContent = texto; balao.classList.add("on");
     balao.classList.toggle("longo", texto.length > 22); fala.ultima = performance.now();
@@ -329,7 +330,7 @@ new MutationObserver(() => document.querySelectorAll("canvas.clawd-grande").forE
 document.querySelectorAll("canvas.clawd-grande").forEach(clawdGrande);
 
 // The companion greets the pointer too (not while he is talking).
-document.querySelector(".clawd")?.addEventListener("pointerenter", () => { if (!document.querySelector(".clawd-balao.on")) Clawd.fala("oi", 1000); });
+document.querySelector(".clawd")?.addEventListener("pointerenter", () => { if (!document.querySelector(".clawd-balao.on")) Clawd.fala(t("clawd.oi"), 1000); });
 
 // ---- Clawd talks ------------------------------------------------------------------------
 // While Claude is idle he chimes in every couple of minutes: something about
@@ -367,15 +368,15 @@ const hora = () => new Date().getHours();
 function sobreOProjeto() {
   const l = [], pasta = ($("pasta").title || "").split(/[\/]/).filter(Boolean).pop();
   const doProjeto = (typeof sessoes !== "undefined" ? sessoes : []).filter((s) => s.cwd === $("pasta").title);
-  if (pasta) l.push(doProjeto.length > 1 ? `A gente já teve ${doProjeto.length} conversas sobre ${pasta}.` : `Primeira vez mexendo em ${pasta}? Me pede pra explicar a estrutura.`);
+  if (pasta) l.push(doProjeto.length > 1 ? t("clawd.conversasSobre", { n: doProjeto.length, pasta }) : t("clawd.primeiraVez", { pasta }));
   const arquivos = typeof alteracoes === "function" ? alteracoes().size : 0;
-  if (arquivos) l.push(`Mexemos em ${arquivos} arquivo${arquivos > 1 ? "s" : ""} nesta conversa. Estão todos no botão de alterações lá em cima.`);
+  if (arquivos) l.push(t("clawd.arquivosMexidos", { n: arquivos }));
   const ctx = parseInt($("medidor")?.textContent || "0", 10);
-  if (ctx >= 70) l.push(`O contexto já está em ${ctx}%. Um /compact agora deixa tudo mais leve.`);
+  if (ctx >= 70) l.push(t("clawd.contextoAlto", { n: ctx }));
   const c = window.cansacoClawd;
-  if (c != null && c >= 0.8 && c < 1) l.push(`Já usamos ${Math.round(c * 100)}% da sessão de 5 horas. Vou com calma.`);
-  if (hora() >= 0 && hora() < 5) l.push("Já é madrugada. Bora salvar e descansar daqui a pouco?");
-  if (hora() >= 12 && hora() < 14) l.push("Hora do almoço. Eu fico de olho aqui.");
+  if (c != null && c >= 0.8 && c < 1) l.push(t("clawd.sessaoCheia", { n: Math.round(c * 100) }));
+  if (hora() >= 0 && hora() < 5) l.push(t("clawd.madrugada"));
+  if (hora() >= 12 && hora() < 14) l.push(t("clawd.almoco"));
   return l;
 }
 let vez = 0, proxima = performance.now() + 75000;
@@ -386,7 +387,7 @@ function clawdConversa(agora) {
   if (Clawd.margem < 170) return false;   // no room beside the box: he keeps quiet
   if (!agora && performance.now() < proxima) return false;
   if (g.novidades !== false && !buscouNovidades) { buscouNovidades = true; vivo.novidades?.().then((n) => (novidades = Array.isArray(n) ? n : [])).catch(() => {}); }
-  const fontes = [sobreOProjeto(), CURIOSIDADES, DICAS, novidades.map((n) => "Novidade: " + n)];
+  const fontes = [sobreOProjeto(), CURIOSIDADES, DICAS, novidades.map((n) => t("clawd.novidade", { n }))];
   let linha = "";
   for (let k = 0; k < 4 && !linha; k++) { const f = fontes[(vez + k) % 4]; if (f.length) linha = f[Math.floor(Math.random() * f.length)]; }
   vez++;

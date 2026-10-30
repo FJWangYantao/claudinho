@@ -41,7 +41,7 @@ function chaveApi() {
 // every query goes through here: the person's Claude Code and the chosen sign-in
 function query(args) {
   const exe = acharClaude();
-  if (!exe && !temClaudeEmbutido()) throw new Error("Não encontrei o Claude Code neste computador. Instale em code.claude.com/docs/en/setup e abra o Claudinho de novo.");
+  if (!exe && !temClaudeEmbutido()) throw new Error(tm("erro.semClaude"));
   const extra = {};
   if (exe) extra.pathToClaudeCodeExecutable = exe;
   const chave = config.entrar === "chave" ? chaveApi() : "";
@@ -95,6 +95,67 @@ function lerConfig() {
 function salvarConfig() {
   try { fs.mkdirSync(path.dirname(configPath()), { recursive: true }); fs.writeFileSync(configPath(), JSON.stringify(config, null, 2)); } catch {}
 }
+// ---- language -------------------------------------------------------------------------
+// The same two languages the window speaks (src/renderer/i18n.js), cut down to
+// what this side says: dialog titles, the file-type names and the errors that
+// travel back to the window. The window picks the language and saves it in
+// config.visual.idioma, so both sides always agree.
+const TEXTOS_M = {
+  pt: {
+    "anexar": "Anexar arquivos",
+    "importarMotion": "Importar animação do ASCII Motion",
+    "exportar": "Exportar conversa",
+    "pastaProjeto": "Pasta do projeto",
+    "escolher": "Escolher {tipo}",
+    "tipo.fundos": "Imagem, GIF ou vídeo",
+    "tipo.sons": "Som",
+    "tipo.musica": "Música",
+    "tipo.fontes": "Fonte",
+    "tipo.icone": "Ícone",
+    "erro.formato": "Formato .{ext} não serve para {tipo}.",
+    "erro.tipo": "Tipo desconhecido.",
+    "erro.semChaveSegura": "O sistema não oferece armazenamento seguro para a chave.",
+    "erro.semClaude": "Não encontrei o Claude Code neste computador. Instale em code.claude.com/docs/en/setup e abra o Claudinho de novo.",
+    "semConversa": "Sem conversa.",
+    "semPasta": "Sem pasta",
+    "rascunhos": "Rascunhos",
+    "semTitulo": "Sem título",
+    "ramo": "Ramo",
+    "conversa": "Conversa",
+  },
+  zh: {
+    "anexar": "附加文件",
+    "importarMotion": "导入 ASCII Motion 动画",
+    "exportar": "导出对话",
+    "pastaProjeto": "项目文件夹",
+    "escolher": "选择{tipo}",
+    "tipo.fundos": "图片、GIF 或视频",
+    "tipo.sons": "音效",
+    "tipo.musica": "音乐",
+    "tipo.fontes": "字体",
+    "tipo.icone": "图标",
+    "erro.formato": ".{ext} 格式不能用作{tipo}。",
+    "erro.tipo": "未知类型。",
+    "erro.semChaveSegura": "本系统没有提供安全的密钥存储。",
+    "erro.semClaude": "在这台电脑上没找到 Claude Code。请先在 code.claude.com/docs/en/setup 安装，然后重新打开 Claudinho。",
+    "semConversa": "没有对话。",
+    "semPasta": "无文件夹",
+    "rascunhos": "草稿",
+    "semTitulo": "无标题",
+    "ramo": "分支",
+    "conversa": "对话",
+  },
+};
+const idiomaAtual = () => (TEXTOS_M[config.visual?.idioma] ? config.visual.idioma : "pt");
+const tm = (chave, params) => {
+  const d = TEXTOS_M[idiomaAtual()] || TEXTOS_M.pt;
+  let s = d[chave] ?? TEXTOS_M.pt[chave] ?? chave;
+  if (params) s = s.replace(/\{(\w+)\}/g, (m, k) => (params[k] ?? m));
+  return s;
+};
+// The window asks once, synchronously, before its first paint.
+ipcMain.on("idioma", (e) => { e.returnValue = idiomaAtual(); });
+
 const enviarEvento = (j, ev) => {
   if (process.env.VIVO_LOG) console.log("[evento]", ev.tipo, ev.tema || ev.nome || ev.ferramenta || ev.modelo || ev.detalhe || ev.texto || "");
   if (j?.win && !j.win.isDestroyed()) j.win.webContents.send("evento", ev);
@@ -249,11 +310,11 @@ const idMotion = (id) => String(id).replace(/[^a-z0-9-]/g, "");
 // the app icon, copied into the app's data folder so they keep working if the
 // originals move. The window gets them back as file:// URLs.
 const TIPOS = {
-  fundos: { nome: "Imagem, GIF ou vídeo", ext: ["png", "jpg", "jpeg", "webp", "gif", "avif", "mp4", "webm", "mov", "m4v"] },
-  sons: { nome: "Som", ext: ["mp3", "wav", "ogg", "m4a", "flac", "aac", "opus"] },
-  musica: { nome: "Música", ext: ["mp3", "wav", "ogg", "m4a", "flac", "aac", "opus"] },
-  fontes: { nome: "Fonte", ext: ["ttf", "otf", "woff", "woff2"] },
-  icone: { nome: "Ícone", ext: ["png", "ico", "jpg", "jpeg"] },
+  fundos: { chave: "tipo.fundos", ext: ["png", "jpg", "jpeg", "webp", "gif", "avif", "mp4", "webm", "mov", "m4v"] },
+  sons: { chave: "tipo.sons", ext: ["mp3", "wav", "ogg", "m4a", "flac", "aac", "opus"] },
+  musica: { chave: "tipo.musica", ext: ["mp3", "wav", "ogg", "m4a", "flac", "aac", "opus"] },
+  fontes: { chave: "tipo.fontes", ext: ["ttf", "otf", "woff", "woff2"] },
+  icone: { chave: "tipo.icone", ext: ["png", "ico", "jpg", "jpeg"] },
 };
 const pastaPessoal = (tipo) => path.join(app.getPath("userData"), "pessoal", tipo);
 const itemPessoal = (tipo, arquivo) => ({ id: arquivo, nome: arquivo.replace(/^[0-9a-f]{6}-/, "").replace(/\.[^.]+$/, ""), url: pathToFileURL(path.join(pastaPessoal(tipo), arquivo)).href, ext: path.extname(arquivo).slice(1).toLowerCase() });
@@ -265,7 +326,7 @@ function listaPessoal(tipo) {
 }
 function copiaPessoal(tipo, origem, nome) {
   const ext = path.extname(origem).slice(1).toLowerCase();
-  if (!TIPOS[tipo]?.ext.includes(ext)) throw new Error(`Formato .${ext} não serve para ${TIPOS[tipo]?.nome.toLowerCase() || tipo}.`);
+  if (!TIPOS[tipo]?.ext.includes(ext)) throw new Error(tm("erro.formato", { ext, tipo: TIPOS[tipo] ? tm(TIPOS[tipo].chave).toLowerCase() : tipo }));
   const base = (nome || path.basename(origem, path.extname(origem))).replace(/[^\p{L}\p{N} _().-]+/gu, "").trim().slice(0, 60) || tipo;
   const arquivo = `${crypto.randomBytes(3).toString("hex")}-${base}.${ext}`;
   fs.mkdirSync(pastaPessoal(tipo), { recursive: true });
@@ -555,13 +616,13 @@ ipcMain.handle("enviar", (e, texto, anexos) => {
 ipcMain.handle("janela_nova", (_e, sessao) => { criarJanela(sessao || undefined); });
 ipcMain.handle("comandos", async (e) => { try { return await comandos(J(e)); } catch (e) { console.log("[comandos]", e?.message || e); return []; } });
 ipcMain.handle("anexar", async (e) => {
-  const r = await dialog.showOpenDialog(J(e).win, { title: "Anexar arquivos", defaultPath: J(e).cwd, properties: ["openFile", "multiSelections"] });
+  const r = await dialog.showOpenDialog(J(e).win, { title: tm("anexar"), defaultPath: J(e).cwd, properties: ["openFile", "multiSelections"] });
   return r.canceled ? [] : r.filePaths;
 });
 ipcMain.handle("motion_importar", async (e, caminho) => {
   let arquivo = caminho;
   if (!arquivo) {
-    const r = await dialog.showOpenDialog(J(e).win, { title: "Importar animação do ASCII Motion", filters: [{ name: "ASCII Motion", extensions: ["json", "asciimtn", "txt"] }], properties: ["openFile"] });
+    const r = await dialog.showOpenDialog(J(e).win, { title: tm("importarMotion"), filters: [{ name: "ASCII Motion", extensions: ["json", "asciimtn", "txt"] }], properties: ["openFile"] });
     if (r.canceled || !r.filePaths[0]) return null;
     arquivo = r.filePaths[0];
   }
@@ -665,7 +726,7 @@ ipcMain.handle("responder", (_e, { id, respostas }) => {
 // query on the conversation does it when no turn is running.
 ipcMain.handle("desfazer", async (e, { uuid, simular }) => {
   const { sessionId, atual, cwd } = J(e);
-  if (!sessionId || !uuid) return { canRewind: false, error: "Sem conversa." };
+  if (!sessionId || !uuid) return { canRewind: false, error: tm("semConversa") };
   if (atual) return await atual.q.rewindFiles(uuid, { dryRun: !!simular }).catch((e) => ({ canRewind: false, error: String(e.message || e) }));
   const ac = new AbortController();
   let solta;
@@ -717,8 +778,8 @@ function titulosDoApp() {
 // worked in (the terminal, the Claude app, other windows: all the same files).
 // Scratch folders the Claude app makes for loose chats count as one project.
 const projeto = (cwd) => {
-  if (!cwd) return "Sem pasta";
-  if (/[\\/]scratch-workspaces[\\/]|[\\/]scratch-\d{4}-\d\d-\d\d-[0-9a-f]+$/i.test(cwd)) return "Rascunhos";
+  if (!cwd) return tm("semPasta");
+  if (/[\\/]scratch-workspaces[\\/]|[\\/]scratch-\d{4}-\d\d-\d\d-[0-9a-f]+$/i.test(cwd)) return tm("rascunhos");
   return cwd.split(/[\\/]/).filter(Boolean).pop();
 };
 ipcMain.handle("sessoes", async (e, { todas } = {}) => {
@@ -727,7 +788,7 @@ ipcMain.handle("sessoes", async (e, { todas } = {}) => {
     return lista.map((s) => {
       const a = doApp.get(s.sessionId);
       // a name the person gave wins (in the app or here); then the app's own title
-      const titulo = (a?.doUsuario && a.titulo) || s.customTitle || a?.titulo || s.summary || s.firstPrompt || "Sem título";
+      const titulo = (a?.doUsuario && a.titulo) || s.customTitle || a?.titulo || s.summary || s.firstPrompt || tm("semTitulo");
       return { id: s.sessionId, titulo, quando: Math.max(s.lastModified || 0, a?.quando || 0), cwd: s.cwd || "", projeto: projeto(s.cwd), doApp: !!a, arquivada: !!a?.arquivada };
     }).filter((s) => !s.arquivada);
   } catch { return []; }
@@ -748,16 +809,16 @@ ipcMain.handle("ramificar", async (e, { id, uuid, titulo, cwd }) => {
     const dir = cwd && fs.existsSync(cwd) ? cwd : j.cwd;
     const r = await forkSession(origem, { dir, upToMessageId: uuid || undefined, title: titulo || undefined });
     j.cwd = dir; j.sessionId = r.sessionId;
-    return { id: r.sessionId, titulo: titulo || "Ramo", cwd: dir };
+    return { id: r.sessionId, titulo: titulo || tm("ramo"), cwd: dir };
   } catch (e) { console.log("[ramificar]", e?.message || e); return null; }
 });
 // Export a conversation as Markdown, where the person chooses.
 ipcMain.handle("exportar", async (e, { id, titulo, cwd }) => {
   const nome = (titulo || "conversa").replace(/[\\/:*?"<>|]+/g, " ").trim().slice(0, 80) || "conversa";
-  const r = await dialog.showSaveDialog(J(e).win, { title: "Exportar conversa", defaultPath: path.join(app.getPath("documents"), nome + ".md"), filters: [{ name: "Markdown", extensions: ["md"] }] });
+  const r = await dialog.showSaveDialog(J(e).win, { title: tm("exportar"), defaultPath: path.join(app.getPath("documents"), nome + ".md"), filters: [{ name: "Markdown", extensions: ["md"] }] });
   if (r.canceled || !r.filePath) return null;
   try {
-  const partes = [`# ${titulo || "Conversa"}`, ""];
+  const partes = [`# ${titulo || tm("conversa")}`, ""];
   for (const m of await historico(id, cwd || J(e).cwd)) {
     if (m.papel === "eu") partes.push(`**Você:**${m.imagens ? ` _(${m.imagens} imagem${m.imagens > 1 ? "ns" : ""})_` : ""}`, "", m.texto || "", "");
     else if (m.papel === "claude") partes.push("**Claude:**", "", m.texto, "");
@@ -799,7 +860,7 @@ ipcMain.handle("apagar", async (e, id, cwd) => {
 ipcMain.handle("pasta", async (e) => {
   const j = J(e);
   if (j.atual) return null;
-  const r = await dialog.showOpenDialog(j.win, { title: "Pasta do projeto", defaultPath: j.cwd, properties: ["openDirectory"] });
+  const r = await dialog.showOpenDialog(j.win, { title: tm("pastaProjeto"), defaultPath: j.cwd, properties: ["openDirectory"] });
   if (r.canceled || !r.filePaths[0]) return null;
   config.cwd = j.cwd = r.filePaths[0]; j.sessionId = null; salvarConfig(); return j.cwd;
 });
@@ -817,10 +878,10 @@ ipcMain.handle("visual_salvar", (_e, visual) => {
 });
 ipcMain.handle("pessoal_lista", (_e, tipo) => listaPessoal(tipo));
 ipcMain.handle("pessoal_importar", async (e, tipo, caminhos) => {
-  if (!TIPOS[tipo]) return { erro: "Tipo desconhecido." };
+  if (!TIPOS[tipo]) return { erro: tm("erro.tipo") };
   let lista = Array.isArray(caminhos) ? caminhos.filter(Boolean) : [];
   if (!lista.length) {
-    const r = await dialog.showOpenDialog(J(e).win, { title: `Escolher ${TIPOS[tipo].nome.toLowerCase()}`, filters: [{ name: TIPOS[tipo].nome, extensions: TIPOS[tipo].ext }], properties: ["openFile", ...(tipo === "icone" ? [] : ["multiSelections"])] });
+    const r = await dialog.showOpenDialog(J(e).win, { title: tm("escolher", { tipo: tm(TIPOS[tipo].chave).toLowerCase() }), filters: [{ name: tm(TIPOS[tipo].chave), extensions: TIPOS[tipo].ext }], properties: ["openFile", ...(tipo === "icone" ? [] : ["multiSelections"])] });
     if (r.canceled) return { itens: [] };
     lista = r.filePaths;
   }
@@ -842,7 +903,7 @@ ipcMain.handle("conta_salvar", (_e, { entrar, chave }) => {
   if (typeof chave === "string") {
     const c = chave.trim();
     if (!c) delete config.chaveApi;
-    else if (!safeStorage.isEncryptionAvailable()) return { erro: "O sistema não oferece armazenamento seguro para a chave." };
+    else if (!safeStorage.isEncryptionAvailable()) return { erro: tm("erro.semChaveSegura") };
     else config.chaveApi = safeStorage.encryptString(c).toString("base64");
   }
   salvarConfig();

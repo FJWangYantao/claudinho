@@ -14,6 +14,9 @@ contextBridge.exposeInMainWorld("vivo", {
   renomear: (id, titulo, cwd) => ipcRenderer.invoke("renomear", { id, titulo, cwd }),
   apagar: (id, cwd) => ipcRenderer.invoke("apagar", id, cwd),
   config: (mudanca) => ipcRenderer.invoke("config", mudanca),
+  // The language picked in Personalizar → Geral → Idioma, read once at startup
+  // (synchronously, so the first paint is already in the right language).
+  idioma: () => { try { return ipcRenderer.sendSync("idioma") || "pt"; } catch { return "pt"; } },
   barra: (claro) => ipcRenderer.invoke("barra", claro),
   link: (url) => ipcRenderer.invoke("link", url),
   comandos: () => ipcRenderer.invoke("comandos"),
